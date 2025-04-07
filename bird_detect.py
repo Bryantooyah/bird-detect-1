@@ -11,8 +11,8 @@ frame_width = 1280
 frame_height = 720
 
 # Video source is MP4 file stored locally
-cap = cv2.VideoCapture("source/birds.mp4")
-
+#cap = cv2.VideoCapture("source/birds.mp4")
+cap = cv2.VideoCapture(1) # Use webcam as video source
 # Only save an image on frame 0
 frame_count = 0
 
@@ -72,7 +72,7 @@ while True:
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(
                 frame,
-                class_name + " " + str(round(conf, 3)) + "%",
+                class_name + " " + str(round(conf, 3)*100) + "%",
                 (int(bb[0]), int(bb[1]) - 10),
                 font,
                 1,
