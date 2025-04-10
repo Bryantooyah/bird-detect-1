@@ -2,18 +2,6 @@ import cv2
 import datetime
 import os
 from ultralytics import YOLO
-import serial
-import time
-
-# Set up serial communication with Arduino
-#arduino = serial.Serial(port = '/dev/ttyUSB0',baudrate = 9600, timeout = 1)  # Adjust the port as needed (MAC)
-arduino = serial.Serial(port = 'COM3', baudrate = 9600, timeout = 1)  # Adjust the port as needed (Windows)
-time.sleep(0.05)  # Wait for the serial connection to initialize
-
-def send_coordinates(x, y):
-    # Send coordinates to Arduino
-    data = f"{x},{y}\n"
-    arduino.write(data.encode("utf-8"))
 
 # Loading pretrained YOLO model (will be downloaded on first run)
 model = YOLO("model/yolov8n.pt", "v8")
@@ -23,8 +11,8 @@ frame_width = 1280
 frame_height = 720
 
 # Video source is MP4 file stored locally
-cap = cv2.VideoCapture("source/birds.mp4")
-#cap = cv2.VideoCapture(0) # Use webcam as video source
+#cap = cv2.VideoCapture("source/birds.mp4")
+cap = cv2.VideoCapture(1) # Use webcam as video source
 # Only save an image on frame 0
 frame_count = 0
 
@@ -43,21 +31,22 @@ while True:
     frame = cv2.resize(frame, (frame_width, frame_height))
 
     # Do prediction on image, with confidence greater than 80%
-    results = model.predict(source=[frame], conf=0.8, save=False)
+    detect_params = model.predict(source=[frame], conf=0.8, save=False)
 
-    DP = results[0].numpy()
+    DP = detect_params[0].numpy()
 
     if len(DP) != 0:
-        # Process each detection
-        for result in results:
-            boxes = result.boxes  # Bounding boxes
-            for box in boxes:
-                cls_id = int(box.cls)  # Class ID
-                conf = box.conf.numpy()[0]  # Confidence score
-                x1, y1, x2, y2 = map(int, box.xyxy[0])  # Bounding box coordinates
+        for i in range(len(detect_params[0])):
 
-                # Get class name
-                class_name = model.names[cls_id]
+            boxes = detect_params[0].boxes
+            box = boxes[i]
+            clsID = box.cls.numpy()[0]
+            conf = box.conf.numpy()[0]
+            bb = box.xyxy.numpy()[0]
+            c = box.cls
+            # Name of object detected (e.g. 'bird')
+            class_name = model.names[int(c)]
+
         # If the class name contains the word 'bird', do something with the frame
         if 'bird' in class_name.lower():
 
@@ -66,30 +55,30 @@ while True:
                 filename = os.path.join("images", current_time.strftime("bird_%Y-%m-%d_%H-%M-%S-%f.jpg"))
                 success = cv2.imwrite(filename, frame)
 
-            frame_count = (frame_count + 1) % 11
+            if frame_count == 10:
+                frame_count = 0
+            else:
+                frame_count += 1
 
             # Draw green rectangle around the object
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
-
+            cv2.rectangle(
+                frame,
+                (int(bb[0]), int(bb[1])),
+                (int(bb[2]), int(bb[3])),
+                (0, 255, 0),
+                3,
+            )
             # Add some text labelling to the rectangle
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(
                 frame,
                 class_name + " " + str(round(conf, 3)*100) + "%",
-                (int(x1), int(y1) - 10),
+                (int(bb[0]), int(bb[1]) - 10),
                 font,
                 1,
                 (255,255,255),
                 2,
             )
-            # Print coordinates of the bounding box
-            Xa = int(x1+x2)/2
-            Ya = int(y1+y2)/2
-            print(f"Coordinates: ({Xa}, {Ya})")
-            # Send coordinates to Arduino
-            send_coordinates(Xa, Ya)
-            
-
 
     # Display the frame onscreen
     cv2.imshow("Object Detection", frame)
