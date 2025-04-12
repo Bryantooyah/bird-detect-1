@@ -5,20 +5,31 @@ from ultralytics import YOLO
 import serial
 import time
 
-?
+# Set up serial communication with Arduino
+#arduino = serial.Serial(port = '/dev/cu.usbserial-1120',baudrate = 9600, timeout = 1)  # Adjust the port as needed (MAC)
+arduino = serial.Serial(port = 'COM3', baudrate = 9600, timeout = 1)  # Adjust the port as needed (Windows)
+time.sleep(0.05)  # Wait for the serial connection to initialize
+
+def send_coordinates(x, y):
+    # Send coordinates to Arduino
+    data = f"{x},{y}\n"
+    arduino.write(data.encode("utf-8"))
 
 # Loading pretrained YOLO model (will be downloaded on first run)
 model = YOLO("model/yolov8n.pt", "v8")
 
-# Set dimensions of video frames
-frame_width = 1280
-frame_height = 720
+
 
 # Video source is MP4 file stored locally
-cap = cv2.VideoCapture("source/birds.mp4")
-#cap = cv2.VideoCapture(0) # Use webcam as video source
+#cap = cv2.VideoCapture("source/birds.mp4")
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) # Use webcam as video source
 # Only save an image on frame 0
+# Retrieve and print actual settings
 frame_count = 0
+
+# Set dimensions of video frames
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
 if not cap.isOpened():
     print("Cannot open video stream")
@@ -31,8 +42,7 @@ while True:
         print("No video frame available")
         break
     
-    # Resize the frame
-    frame = cv2.resize(frame, (frame_width, frame_height))
+    
 
     # Do prediction on image, with confidence greater than 80%
     results = model.predict(source=[frame], conf=0.8, save=False)

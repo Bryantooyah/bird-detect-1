@@ -7,14 +7,15 @@ from ultralytics import YOLO
 # Loading pretrained YOLO model (will be downloaded on first run)
 model = YOLO("model/yolov8n.pt", "v8")
 
-# Set dimensions of video frames
-frame_width = 1280
-frame_height = 720
-
 # Video source is MP4 file stored locally
 #cap = cv2.VideoCapture("source/birds.mp4")
-cap = cv2.VideoCapture(0) # Use webcam as video source
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) # Use webcam as video source
 # Only save an image on frame 0
+
+# Set dimensions of video frames
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
 frame_count = 0
 
 if not cap.isOpened():
@@ -27,9 +28,6 @@ while True:
     if not ret:
         print("No video frame available")
         break
-    
-    # Resize the frame
-    frame = cv2.resize(frame, (frame_width, frame_height))
 
     # Do prediction on image, with confidence greater than 80%
     results = model.predict(source=[frame], conf=0.8, save=False)
